@@ -8,7 +8,7 @@ let upload = require('../config/multer.config.js');
 
 
 router.post("/:companyId", upload.any()  , checkAuth, opportunityControlller.newOpportunity);
-router.get("/company/:companyId", checkAuth ,  opportunityControlller.getOpportunitiesByCompany);
+router.get("/:companyId", checkAuth ,  opportunityControlller.getOpportunitiesByCompany);
 router.delete("/:opportunityId", checkAuth ,  opportunityControlller.deleteOpportunity);
 router.put("/updateOne/:opportunityId", checkAuth ,  opportunityControlller.updateOpportunity);
 router.put("/updateOpportunityCover/:opportunityId", checkAuth ,opportunityControlller.updateOpportunityCover);
