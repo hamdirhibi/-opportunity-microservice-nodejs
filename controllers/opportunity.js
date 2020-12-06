@@ -2,21 +2,60 @@ const Notification = require ('../models/notification');
 const Opportunity = require('../models/opportunity');
 const User = require('../models/user') ; 
 const Application = require('../models/application') ; 
+const Skill = require('../models/skill');
 
+
+
+exports.getOpportunities= async (req,res) =>{
+    try {
+        
+        const ds = await Opportunity
+        .find()
+        .populate({path: 'skills', Model: Skill })
+        .populate('company')
+        .exec();
+    
+        res.json(ds)
+    }
+    catch(err){
+        res.json({message: err})
+    }
+}
+exports.getOpportunityById= async (req,res) =>{
+    try {
+        
+        const ds = await Opportunity
+        .findById(
+            req.params.opportunityId 
+        )
+        .populate({path: 'skills', Model: Skill })
+        .populate({ path :'company', 
+                    populate : { path : 'opportunities', Model : Opportunity } 
+                  })
+        .populate('applications')
+        .exec() ;
+    
+        res.json(ds)
+    }
+    catch(err){
+        res.json({message: err})
+    }
+}
 
 
 exports.newOpportunity = async (req,res) =>{
 
     try{
-        const company = await User.findById(req.params.companyId); 
-        
+        console.log(req.userData)
+        const company = await User.findById(req.userData.user._id); 
+        console.log()
         if (!company) {
             return res
             .status(409)
             .json({ message: "company  doesn't  exist ! " });
         }
         const createdAt = new Date();
-
+        
         if (createdAt>req.body.date){
             return res
             .status(409)
@@ -29,27 +68,61 @@ exports.newOpportunity = async (req,res) =>{
         skills = req.body.skills; 
         let image = null ;
         if (req.files!=undefined)
-            image = req.files[0].originalname;
-    
-
-        const newOpportunity = new Opportunity({
+            image = req.files[0].path;
+        var newOpportunity ; 
+        switch (req.body.type)  {
+        case "INTERNSHIP":  {
+            newOpportunity = await Opportunity.create({
             title : req.body.title ,
             description : req.body.description ,
-            date : req.body.date ,
+            date : new Date()  ,
             cover : image ,
             type : req.body.type ,
             sallary : req.body.sallary ,
-            company : req.params.companyId,
+            company : req.userData.user._id,
+            skills : skills , 
+            createdAt : createdAt , 
+            status : 'AVAILABEL' 
+        });break }
+        case "SESSION":{ 
+            newOpportunity  = await Opportunity.create({
+            title : req.body.title ,
+            description : req.body.description ,
+            date : new Date()  ,
+            cover : image ,
+            type : req.body.type ,
+            price : req.body.price ,
+            company : req.userData.user._id,
+            skills : skills , 
+            createdAt : createdAt , 
+            status : 'AVAILABEL' 
+        });break } 
+        case "JOB":{ 
+            newOpportunity  = await Opportunity.create({
+            title : req.body.title ,
+            description : req.body.description ,
+            date : new Date()  ,
+            cover : image ,
+            type : req.body.type ,
+            sallary : req.body.sallary ,
+            company : req.userData.user._id,
             contratType : req.body.contratType,
             skills : skills , 
-            status : 'available' 
-        });
+            createdAt : createdAt , 
+            status : 'AVAILABEL' 
+        });break ;} 
+        } 
+        await company.opportunities.push(newOpportunity) ; 
+        
+        await company.save().then( () =>{
+            req.userData.user=company; 
+            res.status(200).json(newOpportunity);
+        }) 
 
-        const savedOpportunity= await newOpportunity.save() ; 
-        res.status(200).json(savedOpportunity);
 
     }catch (err){
-        res.json({message : err}); 
+        console.log(err)
+        res.status(400).json({message : err}); 
         console.log(err) ;
     }
 
@@ -60,14 +133,18 @@ exports.newOpportunity = async (req,res) =>{
 exports.getOpportunitiesByCompany = async (req,res) =>{
     try {
         
-        const ds = await Notification.find({
-            user : req.userData.user._id,
-        })
+        const ds = await Opportunity.find({
+            company : req.params.companyId,
+        })     
+        .populate({path: 'skills', Model: Skill })
+        .populate('company')
+        .exec() ; 
+
         res.json(ds)
     }
     catch(err){
         res.json({message: err})
-    }
+    } 
 }
 
 
